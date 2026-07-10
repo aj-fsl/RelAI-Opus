@@ -1,0 +1,132 @@
+# ==========================
+# Python
+# ==========================
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Virtual environments
+.venv/
+venv/
+env/
+ENV/
+
+# Python build files
+build/
+dist/
+*.egg-info/
+.eggs/
+pip-wheel-metadata/
+
+# Logs
+*.log
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.mypy_cache/
+
+# ==========================
+# FastAPI
+# ==========================
+*.db
+*.sqlite3
+
+# Environment variables
+.env
+.env.*
+.env.production
+
+# Keep sample env files if you have them
+!.env.example
+
+# ==========================
+# Node / React / Vite
+# ==========================
+node_modules/
+dist/
+.npm/
+.pnpm-store/
+
+# Vite cache
+.vite/
+
+# npm logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# ==========================
+# VS Code
+# ==========================
+.vscode/
+
+# IntelliJ
+.idea/
+
+# Mac
+.DS_Store
+
+# Windows
+Thumbs.db
+Desktop.ini
+
+# ==========================
+# Azure
+# ==========================
+.azure/
+.publish/
+*.publishsettings
+
+# Azure Functions (if ever added)
+bin/
+obj/
+
+# ==========================
+# Plugin uploads
+# ==========================
+server/plugins/*
+!server/plugins/.gitkeep
+
+# If your plugins folder is elsewhere
+plugins/*
+!plugins/.gitkeep
+
+# ==========================
+# Runtime data
+# ==========================
+
+# Ignore generated demo data
+server/demos.json
+
+# If you want to keep an empty demo file instead,
+# comment the above line and use:
+# !server/demos.example.json
+
+# ==========================
+# Secrets
+# ==========================
+*.pem
+*.key
+*.crt
+*.pfx
+*.p12
+
+# ==========================
+# Coverage
+# ==========================
+.coverage
+coverage.xml
+
+# ==========================
+# Temporary files
+# ==========================
+*.swp
+*.swo
+*.tmp
+*.bak

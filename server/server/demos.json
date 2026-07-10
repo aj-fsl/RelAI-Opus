@@ -1,0 +1,42 @@
+[
+  {
+    "name": "PDM",
+    "description": "Provider Data Management (PDM) is an automated workflow that processes provider requests such as adding new providers, updating provider information, and terminating providers. It validates provider data, verifies credentialing status, updates the HCPM database, sends automated email notifications, and maintains audit logs to ensure accurate and compliant provider record management.\r\n ",
+    "owner": null,
+    "url": "https://provider-data-management.vercel.app/dashboard",
+    "backend": "https://provider-data-management.vercel.app/dashboard",
+    "category": "HealthCare"
+  },
+  {
+    "name": "Power of Attorney",
+    "description": "The Power of Attorney (POA) Intelligent Application Processing System is an AI-powered document processing application that automates the review and validation of Power of Attorney applications. Users upload the donor ID, attorney ID, and POA document, after which the system securely stores the files and triggers an AI workflow to extract and validate key information such as identities, signatures, financial rights, and decision-making capacity. The application provides real-time job tracking, a centralized dashboard for reviewing processed applications, summary analytics, and integration with enterprise workflow systems to streamline approval and case management processes.",
+    "owner": null,
+    "url": "https://poa-usecase-fe-bqe2gja8fne2hafc.eastus2-01.azurewebsites.net/",
+    "backend": "https://poa-usecase-be-g7e5fyhhgxdbf7hu.eastus-01.azurewebsites.net/",
+    "category": "Legal "
+  },
+  {
+    "name": "Renuity",
+    "description": "Automate the end-to-end sales commission process by integrating CRM transaction data with configurable commission rules, accelerator policies, and clawback logic. The solution eliminates manual calculations, applies business rules automatically, validates payouts, and generates payroll-ready outputs with complete auditability",
+    "owner": null,
+    "url": "https://renuity-fe-dcb6drajhndbbedr.eastus-01.azurewebsites.net/",
+    "backend": "https://renuity-fe-dcb6drajhndbbedr.eastus-01.azurewebsites.net/",
+    "category": "Finance"
+  },
+  {
+    "name": "Texas A&M",
+    "description": "Texas A&M Summarization Portal is an AI-powered admissions intelligence platform that processes applicant documents such as application forms, transcripts, LSAT records, personal statements, resumes, and recommendation letters. It automatically extracts key information, evaluates applicants using standardized rubrics, and generates concise admissions-ready summaries highlighting strengths, readiness indicators, and areas for further review. The system transforms complex application data into a structured decision-support dashboard, enabling admissions reviewers to assess candidates quickly, consistently, and efficiently.",
+    "owner": null,
+    "url": "https://texas-a-and-m-frontend.azurewebsites.net/",
+    "backend": "https://texas-a-and-m-backend.azurewebsites.net/",
+    "category": "Education"
+  },
+  {
+    "name": "SMU",
+    "description": "This workflow automates the complete admissions evaluation process by extracting applicant information, scoring academics, experience, recommendation letters, prerequisites, and essays using specialized AI agents. It aggregates these scores, categorizes applications, determines admission outcomes, sends automated email notifications, and updates application status with minimal manual intervention.",
+    "owner": null,
+    "url": "/apps/SMU",
+    "backend": null,
+    "category": "Education"
+  }
+]

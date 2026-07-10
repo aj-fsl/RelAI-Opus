@@ -1,0 +1,22 @@
+* {
+  box-sizing: border-box;
+}
+
+html, body, #root {
+  margin: 0 !important;
+  padding: 0 !important;
+  width: 100%;
+  min-height: 100%;
+  height: auto;
+  background: #ffffff;
+  background-repeat: no-repeat;
+  background-attachment: scroll;
+}
+
+:root {
+  font-family: 'Inter', system-ui, Avenir, Helvetica, Arial, sans-serif;
+  line-height: 1.5;
+  font-weight: 400;
+  color: #1e293b;
+  background: #ffffff;
+}
