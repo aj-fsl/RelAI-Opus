@@ -1,3 +1,4 @@
+import os
 from fastapi import FastAPI, UploadFile, Form , Request,Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
@@ -20,8 +21,10 @@ app.add_middleware(
     allow_headers=["*"]
 )
 
-PLUGINS_DIR = "plugins"
-DB_FILE = "demos.json"
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
+PLUGINS_DIR = os.path.join(BASE_DIR, "plugins")
+DB_FILE = os.path.join(BASE_DIR, "demos.json")
 
 # Track running backend processes
 backend_processes = {}
