@@ -73,42 +73,57 @@ export default function Admin() {
       form.append("owner", formData.owner);
       form.append("category", formData.category);
 
-      let response;
+      let url, method;
       if (editingDemo) {
-        response = await fetch(
-          `${API_BASE}/api/admin/edit-demo/${editingDemo.name}`,
-          {
-            method: "PUT",
-            body: form
-          }
-        );
+        url = `${API_BASE}/api/admin/edit-demo/${editingDemo.name}`;
+        method = "PUT";
       } else {
+        url = `${API_BASE}/api/admin/upload-demo`;
+        method = "POST";
         if (formData.frontendZip) form.append("frontend_zip", formData.frontendZip);
         if (formData.frontendUrl) form.append("frontend_url", formData.frontendUrl);
         if (formData.backendZip) form.append("backend_zip", formData.backendZip);
         if (formData.backendUrl) form.append("backend_url", formData.backendUrl);
-
-        response = await fetch(
-          `${API_BASE}/api/admin/upload-demo`,
-          {
-            method: "POST",
-            body: form
-          }
-        );
       }
+
+      console.log(`[upload] ${method} ${url}`);
+      console.log("[upload] FormData keys:", [...form.keys()]);
+
+      const response = await fetch(url, { method, body: form });
+      const body = await response.json().catch(() => null);
+
+      console.log(`[upload] HTTP ${response.status}`, body);
 
       if (!response.ok) {
-        throw new Error("Action failed");
+        const detail =
+          body?.error ||
+          body?.detail?.[0]?.msg ||
+          (typeof body?.detail === "string" ? body.detail : null) ||
+          response.statusText;
+        const step = body?.step ? ` (step: ${body.step})` : "";
+        const trace = body?.trace || "";
+        console.error(`[upload] Server error${step}:`, detail, trace);
+        alert(`Error ${response.status}${step}: ${detail}`);
+        return;
       }
 
-      alert(editingDemo ? "Updated Successfully" : "Uploaded Successfully");
+      if (body?.warnings?.length) {
+        console.warn("[upload] Warnings:", body.warnings);
+        alert(
+          (editingDemo ? "Updated" : "Uploaded") +
+            " with warnings:\n" +
+            body.warnings.join("\n")
+        );
+      } else {
+        alert(editingDemo ? "Updated Successfully" : "Uploaded Successfully");
+      }
 
       cancelEdit();
       fetchDemos();
 
     } catch (err) {
-      console.error(err);
-      alert("Action failed");
+      console.error("[upload] Network/fetch error:", err);
+      alert(`Network error: ${err.message}`);
     } finally {
       setLoading(false);
     }
@@ -121,13 +136,19 @@ export default function Admin() {
       const response = await fetch(`${API_BASE}/api/admin/delete-demo/${name}`, {
         method: "DELETE"
       });
-      if (response.ok) {
-        alert("Deleted Successfully");
-        fetchDemos();
+      const body = await response.json().catch(() => null);
+      console.log(`[delete] HTTP ${response.status}`, body);
+
+      if (!response.ok) {
+        const detail = body?.error || response.statusText;
+        alert(`Delete failed (${response.status}): ${detail}`);
+        return;
       }
+      alert("Deleted Successfully");
+      fetchDemos();
     } catch (err) {
-      console.error(err);
-      alert("Delete failed");
+      console.error("[delete] Network error:", err);
+      alert(`Delete failed: ${err.message}`);
     }
   };
 

@@ -1,0 +1,45 @@
+# Virtual Environment
+venv/
+env/
+.venv/
+
+# Environment Variables
+.env
+.env.local
+.env.production
+
+# Google OAuth & Secrets
+token.json
+client_secret_*.json
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+dist/
+build/
+*.egg
+
+# VS Code
+.vscode/
+*.code-workspace
+
+# Testing
+test_api.py
+.pytest_cache/
+*.test.py
+
+# Logs
+*.log
+logs/
+
+# OS Files
+.DS_Store
+Thumbs.db
+
+# Azure
+.azure/
+local.settings.json

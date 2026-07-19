@@ -1,8 +1,8 @@
 import os
-from fastapi import FastAPI, UploadFile, Form , Request,Response
+from fastapi import FastAPI, UploadFile, Form, File, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-import os, zipfile, json, shutil,subprocess, socket, signal, psutil, traceback
+import zipfile, json, shutil, subprocess, socket, signal, psutil, traceback
 import requests
 import sys
 from fastapi.responses import FileResponse, JSONResponse
@@ -59,9 +59,9 @@ def load_existing_demos():
     for demo in demos:
 
         name = demo["name"]
-        demo_path = f"{PLUGINS_DIR}/{name}"
-        frontend_path = f"{demo_path}/frontend"
-        backend_path = f"{demo_path}/backend"
+        demo_path = os.path.join(PLUGINS_DIR, name)
+        frontend_path = os.path.join(demo_path, "frontend")
+        backend_path = os.path.join(demo_path, "backend")
 
         # Re-mount frontend
         if demo["url"].startswith("/apps/") and os.path.exists(frontend_path):
@@ -242,123 +242,164 @@ async def upload_demo(
     owner: str = Form(None),
     category: str = Form(None),
 
-    frontend_zip: UploadFile = Form(None),
+    frontend_zip: UploadFile = File(None),
     frontend_url: str = Form(None),
 
-    backend_zip: UploadFile = Form(None),
+    backend_zip: UploadFile = File(None),
     backend_url: str = Form(None)
 ):
+    step = "init"
+    try:
+        step = "validate_input"
+        name = name.strip()
+        print(f"[upload-demo] name={name!r}, frontend_zip={getattr(frontend_zip, 'filename', None)}, "
+              f"frontend_url={frontend_url!r}, backend_zip={getattr(backend_zip, 'filename', None)}, "
+              f"backend_url={backend_url!r}")
 
-    name = name.strip()
+        if not frontend_zip and not frontend_url:
+            return JSONResponse(status_code=400, content={
+                "success": False, "error": "Provide frontend zip or frontend url", "step": step
+            })
 
-    if not frontend_zip and not frontend_url:
-        return {"error": "Provide frontend zip or frontend url"}
+        if not backend_zip and not backend_url:
+            return JSONResponse(status_code=400, content={
+                "success": False, "error": "Provide backend zip or backend url", "step": step
+            })
 
-    if not backend_zip and not backend_url:
-        return {"error": "Provide backend zip or backend url"}
+        step = "prepare_paths"
+        demo_path = os.path.join(PLUGINS_DIR, name)
+        frontend_path = os.path.join(demo_path, "frontend")
+        backend_path = os.path.join(demo_path, "backend")
+        print(f"[upload-demo] demo_path={demo_path}")
 
-    demo_path = f"{PLUGINS_DIR}/{name}"
-    frontend_path = f"{demo_path}/frontend"
-    backend_path = f"{demo_path}/backend"
+        # Clean old demo
+        if os.path.exists(demo_path):
+            shutil.rmtree(demo_path)
 
-    # Clean old demo
-    if os.path.exists(demo_path):
-        shutil.rmtree(demo_path)
+        os.makedirs(demo_path, exist_ok=True)
 
-    os.makedirs(demo_path, exist_ok=True)
+        errors = []
 
-    errors = []
+        # -------------------------
+        # FRONTEND
+        # -------------------------
+        step = "frontend_upload"
 
-    # -------------------------
-    # FRONTEND
-    # -------------------------
+        if frontend_zip:
+            try:
+                os.makedirs(frontend_path, exist_ok=True)
+                zip_path = os.path.join(demo_path, "frontend.zip")
+                print(f"[upload-demo] writing frontend zip to {zip_path}")
 
-    if frontend_zip:
-        try:
-            os.makedirs(frontend_path, exist_ok=True)
+                contents = await frontend_zip.read()
+                print(f"[upload-demo] frontend zip size: {len(contents)} bytes")
+                with open(zip_path, "wb") as f:
+                    f.write(contents)
 
-            zip_path = f"{demo_path}/frontend.zip"
+                with zipfile.ZipFile(zip_path, 'r') as zf:
+                    print(f"[upload-demo] frontend zip entries: {zf.namelist()[:20]}")
+                    zf.extractall(frontend_path)
 
-            with open(zip_path, "wb") as f:
-                f.write(await frontend_zip.read())
+                frontend_serving_path = resolve_extracted_root(
+                    frontend_path,
+                    required_files=["index.html"]
+                )
+                print(f"[upload-demo] frontend_serving_path={frontend_serving_path}")
 
-            zipfile.ZipFile(zip_path).extractall(frontend_path)
-            frontend_serving_path = resolve_extracted_root(
-                frontend_path,
-                required_files=["index.html"]
+                frontend_entry = f"/apps/{name}"
+                mount_spa(name, frontend_serving_path)
+
+                images_path = os.path.join(frontend_serving_path, "images")
+                if os.path.exists(images_path):
+                    mount_or_replace_public_images(images_path, name)
+
+            except zipfile.BadZipFile as e:
+                traceback.print_exc()
+                errors.append(f"Frontend: uploaded file is not a valid ZIP — {e}")
+                frontend_entry = f"/apps/{name}"
+            except Exception as e:
+                traceback.print_exc()
+                errors.append(f"Frontend: {str(e)}")
+                frontend_entry = f"/apps/{name}"
+        else:
+            frontend_entry = frontend_url
+
+        # -------------------------
+        # BACKEND
+        # -------------------------
+        step = "backend_upload"
+
+        if backend_zip:
+            try:
+                os.makedirs(backend_path, exist_ok=True)
+                zip_path = os.path.join(demo_path, "backend.zip")
+                print(f"[upload-demo] writing backend zip to {zip_path}")
+
+                contents = await backend_zip.read()
+                print(f"[upload-demo] backend zip size: {len(contents)} bytes")
+                with open(zip_path, "wb") as f:
+                    f.write(contents)
+
+                with zipfile.ZipFile(zip_path, 'r') as zf:
+                    print(f"[upload-demo] backend zip entries: {zf.namelist()[:20]}")
+                    zf.extractall(backend_path)
+
+                backend_entry = start_backend(backend_path, name)
+                if not backend_entry:
+                    errors.append("Backend: no supported entrypoint (main.py or server.mjs) found")
+
+            except zipfile.BadZipFile as e:
+                traceback.print_exc()
+                errors.append(f"Backend: uploaded file is not a valid ZIP — {e}")
+                backend_entry = None
+            except Exception as e:
+                traceback.print_exc()
+                errors.append(f"Backend: {str(e)}")
+                backend_entry = None
+        else:
+            backend_entry = backend_url
+
+        if errors and not frontend_entry and not backend_entry:
+            return JSONResponse(
+                status_code=400,
+                content={"success": False, "error": f"Upload failed: {'; '.join(errors)}",
+                         "step": step, "warnings": errors}
             )
 
-            frontend_entry = f"/apps/{name}"
+        # -------------------------
+        # SAVE METADATA
+        # -------------------------
+        step = "save_metadata"
 
-            mount_spa(name, frontend_serving_path)
+        demos = get_demos()
+        demos.append({
+            "name": name,
+            "description": description,
+            "owner": owner,
+            "url": frontend_entry,
+            "backend": backend_entry,
+            "category": category
+        })
+        save_demos_db(demos)
+        print(f"[upload-demo] saved demo {name!r}, total demos: {len(demos)}")
 
-            # Map /public/images -> frontend/images
-            images_path = os.path.join(frontend_serving_path, "images")
-            if os.path.exists(images_path):
-                mount_or_replace_public_images(images_path, name)
+        result = {"success": True, "message": "Uploaded successfully"}
+        if errors:
+            result["warnings"] = errors
+        return result
 
-        except Exception as e:
-            traceback.print_exc()
-            errors.append(f"Frontend: {str(e)}")
-            frontend_entry = f"/apps/{name}"
-
-    else:
-        frontend_entry = frontend_url
-
-    # -------------------------
-    # BACKEND
-    # -------------------------
-
-    if backend_zip:
-        try:
-            os.makedirs(backend_path, exist_ok=True)
-
-            zip_path = f"{demo_path}/backend.zip"
-
-            with open(zip_path, "wb") as f:
-                f.write(await backend_zip.read())
-
-            zipfile.ZipFile(zip_path).extractall(backend_path)
-
-            backend_entry = start_backend(backend_path, name)
-            if backend_entry:
-                backend_entry = f"{backend_entry}"
-            else:
-                backend_entry = None
-                errors.append("Backend: no supported entrypoint (main.py or server.mjs) found")
-
-        except Exception as e:
-            traceback.print_exc()
-            errors.append(f"Backend: {str(e)}")
-            backend_entry = None
-
-    else:
-        backend_entry = backend_url
-
-    if errors and not frontend_entry and not backend_entry:
+    except Exception as e:
+        tb = traceback.format_exc()
+        print(f"[upload-demo] EXCEPTION at step={step}: {e}\n{tb}")
         return JSONResponse(
-            status_code=400,
-            content={"error": f"Upload failed: {'; '.join(errors)}"}
+            status_code=500,
+            content={
+                "success": False,
+                "error": str(e),
+                "step": step,
+                "trace": tb
+            }
         )
-
-    # -------------------------
-    # SAVE METADATA
-    # -------------------------
-
-    demos = get_demos()
-
-    demos.append({
-        "name": name,
-        "description": description,
-        "owner": owner,
-        "url": frontend_entry,
-        "backend": backend_entry,
-        "category": category
-    })
-
-    save_demos_db(demos)
-
-    return {"message": "Uploaded successfully"}
 
 
 @app.put("/api/admin/edit-demo/{demo_name}")
@@ -372,7 +413,7 @@ async def edit_demo(
     demos = get_demos()
     demo = next((d for d in demos if d["name"] == demo_name), None)
     if not demo:
-        return {"error": f"Demo '{demo_name}' not found"}
+        return JSONResponse(status_code=404, content={"success": False, "error": f"Demo '{demo_name}' not found"})
 
     if name is not None:
         demo["name"] = name
@@ -385,24 +426,43 @@ async def edit_demo(
 
     save_demos_db(demos)
 
-    return {"message": "Updated successfully"}
+    return {"success": True, "message": "Updated successfully"}
 
 
 @app.delete("/api/admin/delete-demo/{demo_name}")
 def delete_demo(demo_name: str):
-    demos = get_demos()
-    updated = [d for d in demos if d["name"] != demo_name]
-    if len(updated) == len(demos):
-        return {"error": f"Demo '{demo_name}' not found"}
+    try:
+        demos = get_demos()
+        updated = [d for d in demos if d["name"] != demo_name]
+        if len(updated) == len(demos):
+            return JSONResponse(status_code=404, content={"success": False, "error": f"Demo '{demo_name}' not found"})
 
-    # Remove plugin files if present
-    demo_path = f"{PLUGINS_DIR}/{demo_name}"
-    if os.path.exists(demo_path):
-        shutil.rmtree(demo_path)
+        # Kill backend process if running
+        proc = backend_processes.pop(demo_name, None)
+        if proc and proc.poll() is None:
+            try:
+                parent = psutil.Process(proc.pid)
+                for child in parent.children(recursive=True):
+                    child.kill()
+                parent.kill()
+                parent.wait(timeout=5)
+            except Exception as e:
+                print(f"[delete] Warning: could not kill backend process for {demo_name}: {e}")
 
-    save_demos_db(updated)
+        # Remove plugin files if present
+        demo_path = os.path.join(PLUGINS_DIR, demo_name)
+        if os.path.exists(demo_path):
+            shutil.rmtree(demo_path, ignore_errors=True)
 
-    return {"message": "Deleted successfully"}
+        save_demos_db(updated)
+
+        return {"success": True, "message": "Deleted successfully"}
+    except Exception as e:
+        tb = traceback.format_exc()
+        print(f"[delete] EXCEPTION: {e}\n{tb}")
+        return JSONResponse(status_code=500, content={
+            "success": False, "error": str(e), "trace": tb
+        })
 
 
 @app.api_route("/api/{demo}/{full_path:path}", methods=["GET","POST","PUT","DELETE","PATCH","OPTIONS"])

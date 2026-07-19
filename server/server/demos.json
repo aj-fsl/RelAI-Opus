@@ -38,5 +38,21 @@
     "url": "/apps/SMU",
     "backend": null,
     "category": "Education"
+  },
+  {
+    "name": "ZipTest",
+    "description": null,
+    "owner": null,
+    "url": "/apps/ZipTest",
+    "backend": "http://localhost:64833",
+    "category": null
+  },
+  {
+    "name": "Testing Upload",
+    "description": "This is to test the upload",
+    "owner": "Testing",
+    "url": "/apps/Testing Upload",
+    "backend": "http://localhost:57160",
+    "category": "Testing"
   }
 ]
