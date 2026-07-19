@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
 import "../App.css";
-
-const API_BASE = (import.meta.env.VITE_API_BASE_URL || "").replace(/\/+$/, "");
+import { API_BASE } from "../config/api.js";
 
 export default function Admin() {
   const [formData, setFormData] = useState({
